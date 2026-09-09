@@ -1,0 +1,84 @@
+const db = require('../config/db');
+
+// untuk mencatat transaksi baru (pemasukan/pengeluaran) ke database asli
+const catatTransaksi = async(req, res) => {
+    const { jenis_transaksi, kategori, jumlah, keterangan } = req.body;
+
+    //validasi input
+    if (!jenis_transaksi || !kategori || !jumlah) {
+        return res.status(400).json({ error: "jenis, kategori, dan jumlah transaksi wajib diisi"});
+    }
+
+    try {
+        const tanggalHariIni = new Date().toISOString().split('T')[0];
+
+        const queryInput = `
+            INSERT INTO transaksi (jenis_transaksi, kategori, jumlah, keterangan, tanggal)
+            VALUES (?, ?, ?, ?, ?)
+            `;
+
+        const [hasil] = await db.query(queryInput, [jenis_transaksi, kategori, jumlah, keterangan, tanggalHariIni]);
+        
+        return res.status(201).json({
+            pesan: "Transaksi berhasil dicatat",
+            data: {
+                id_transaksi: hasil.insertId,
+                jenis_transaksi,
+                kategori,
+                jumlah,
+                keterangan,
+                tanggal: tanggalHariIni
+        }
+    });
+    } catch (error) {
+        console.error("Error database:", error.message);
+        res.status(500).json({ error: "gagal menyimpan data ke database "});
+    }
+};
+
+//fungsi mengambil data historis dari database asli
+const ambilSemuaTransaksi = async (req, res) => {
+    try {
+        const [daftartransaksi] = await db.query("SELECT * FROM transaksi ORDER BY tanggal DESC");
+
+        return res.json({
+            pesan: "Berhasil mengambil riwayat transaksi dari database",
+            total_data: daftartransaksi.length,
+            data: daftartransaksi
+        });   
+    } catch (error) {
+        console.error("Error database:", error.message);
+        return res.status(500).json({ error: "Gagal mengambil data dari database"});
+    }
+};   
+
+// halaman stok barang
+const ambilStokBarang = async (req, res) => {
+    try {
+        const [daftarProduk] = await db.query(`
+            SELECT
+                id_produk,
+                nama_produk,
+                sisa_stok,
+                harga_beli,
+                harga_jual,
+                ROUND(((harga_jual - harga_beli) / harga_beli) * 100) AS margin_persen 
+            FROM produk
+        `);
+
+        return res.json({
+            pesan: "Berhasil mengambil daftar stok produk dari database",
+            total_produk: daftarProduk.length,
+            data: daftarProduk
+        });
+    } catch (error) {
+        console.error("Error database stok:", error.message);
+        return res.status(500).json({ error: "Gagal mengambil data stok barang dari database"});
+    } 
+};
+
+module.exports = {
+    catatTransaksi,
+    ambilSemuaTransaksi,
+    ambilStokBarang
+};

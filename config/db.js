@@ -1,26 +1,23 @@
 require('dotenv').config();
-const mysql = require('mysql2');
+const { Pool } = require('pg');
 
-const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'db_cuanku',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false // wajib untuk koneksi ke Supabase
+    },
+    max: 10,          // mirip connectionLimit
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
 });
 
-const db = pool.promise();
-
-pool.getConnection((err, connection) => {
-    if (err) {
-        console.error('Koneksi database GAGAL:', err.message);
-    } else {
+pool.connect()
+    .then((client) => {
         console.log('Koneksi ke database BERHASIL');
-        connection.release();
+        client.release();
+    })
+    .catch((err) => {
+        console.error('Koneksi database GAGAL:', err.message);
+    });
 
-    }
-});
-
-module.exports = db;
+module.exports = pool;

@@ -1,3 +1,19 @@
+"""
+api.py
+
+Membungkus predict_trend() (buatan tim ML) jadi layanan HTTP kecil,
+supaya bisa dipanggil dari backend Express (Node.js) lewat HTTP,
+tanpa perlu Express menjalankan Python secara langsung.
+
+Cara pakai:
+    pip install fastapi uvicorn prophet pandas
+    uvicorn api:app --reload --port 8001
+
+Setelah jalan, coba buka di browser atau curl:
+    http://localhost:8001/health
+    http://localhost:8001/prediksi-tren?n_hari=7
+"""
+
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 from predict import predict_trend
@@ -31,6 +47,10 @@ def get_prediksi_tren(
 
 @app.post("/api/ml/predict-trend")
 def post_prediksi_tren(payload: PrediksiRequest):
+    """
+    Endpoint ini cocok dengan yang dipanggil backend Express
+    (controllers/mlcontroller.js): POST, body {"n_hari": <angka>}.
+    """
     try:
         hasil = predict_trend(payload.n_hari)
     except FileNotFoundError:

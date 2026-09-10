@@ -1,10 +1,30 @@
+"""
+predict.py
+
+Tahap 3: fungsi siap pakai untuk memprediksi tren pemasukan ke depan,
+memuat model yang sudah dilatih (tidak melatih ulang). Ini file yang
+diserahkan ke rekan divisi ML yang mengerjakan API.
+
+Cara pakai (dari kode lain, misal endpoint API):
+
+    from predict import predict_trend
+    hasil = predict_trend(7)   # prediksi 7 hari ke depan
+
+Cara pakai (tes langsung dari terminal):
+    python src/predict.py
+"""
+
 from pathlib import Path
 from prophet.serialize import model_from_json
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent
 MODEL_PATH = ROOT_DIR / "models" / "prophet_model.json"
 
+# model dimuat sekali saja dan disimpan di memori (cache), supaya
+# pemanggilan predict_trend() berkali-kali dari API tidak perlu
+# baca ulang file / latih ulang tiap kali ada request
 _model_cache = None
+
 
 def _get_model():
     global _model_cache
@@ -14,7 +34,15 @@ def _get_model():
     return _model_cache
 
 
-def predict_trend(n_hari: int) -> list[dict]:   
+def predict_trend(n_hari: int) -> list[dict]:
+    """
+    Prediksi total pemasukan untuk n_hari ke depan setelah tanggal
+    terakhir di data training.
+
+    Return: list of dict, satu dict per hari, contoh:
+        [{"tanggal": "2026-08-30", "prediksi_rp": 812000,
+          "batas_bawah_rp": 640000, "batas_atas_rp": 990000}, ...]
+    """
     model = _get_model()
     future = model.make_future_dataframe(periods=n_hari)
     forecast = model.predict(future)
